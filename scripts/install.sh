@@ -17,6 +17,7 @@
 #   cursor       -- Copy rules to .cursor/rules/ in current directory
 #   aider        -- Copy CONVENTIONS.md to current directory
 #   windsurf     -- Copy .windsurfrules to current directory
+#   warp         -- Copy skills to ~/.warp/skills/ (global)
 #   all          -- Install for all detected tools (default)
 #
 # Flags:
@@ -79,7 +80,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INTEGRATIONS="$REPO_ROOT/integrations"
 
-ALL_TOOLS=(claude-code antigravity gemini-cli opencode cursor aider windsurf)
+ALL_TOOLS=(warp claude-code antigravity gemini-cli opencode cursor aider windsurf)
 
 # ---------------------------------------------------------------------------
 # Usage
@@ -102,6 +103,7 @@ check_integrations() {
 # ---------------------------------------------------------------------------
 # Tool detection
 # ---------------------------------------------------------------------------
+detect_warp()        { command -v warp-cli >/dev/null 2>&1 || [[ -d "${HOME}/.warp" ]] || [[ -d "/Applications/Warp.app" ]]; }
 detect_claude_code() { [[ -d "${HOME}/.claude" ]]; }
 detect_antigravity()  { [[ -d "${HOME}/.gemini/antigravity/skills" ]]; }
 detect_gemini_cli()   { command -v gemini >/dev/null 2>&1 || [[ -d "${HOME}/.gemini" ]]; }
@@ -112,6 +114,7 @@ detect_windsurf()     { command -v windsurf >/dev/null 2>&1 || [[ -d "${HOME}/.c
 
 is_detected() {
   case "$1" in
+    warp)        detect_warp        ;;
     claude-code) detect_claude_code ;;
     antigravity) detect_antigravity ;;
     gemini-cli)  detect_gemini_cli  ;;
@@ -126,6 +129,7 @@ is_detected() {
 # Fixed-width labels: name (14) + detail (24) = 38 visible chars
 tool_label() {
   case "$1" in
+    warp)        printf "%-14s  %s" "Warp"         "(~/.warp/skills)"        ;;
     claude-code) printf "%-14s  %s" "Claude Code"  "(claude.ai/code)"        ;;
     antigravity) printf "%-14s  %s" "Antigravity"  "(~/.gemini/antigravity)" ;;
     gemini-cli)  printf "%-14s  %s" "Gemini CLI"   "(gemini extension)"      ;;
@@ -254,6 +258,22 @@ interactive_select() {
 # Installers
 # ---------------------------------------------------------------------------
 
+install_warp() {
+  local src="$INTEGRATIONS/warp"
+  local dest="${HOME}/.warp/skills"
+  local count=0
+  [[ -d "$src" ]] || { err "integrations/warp missing. Run convert.sh first."; return 1; }
+  mkdir -p "$dest"
+  local d
+  while IFS= read -r -d '' d; do
+    local name; name="$(basename "$d")"
+    mkdir -p "$dest/$name"
+    cp "$d/SKILL.md" "$dest/$name/SKILL.md"
+    (( count++ )) || true
+  done < <(find "$src" -mindepth 1 -maxdepth 1 -type d -print0)
+  ok "Warp: $count skills -> $dest"
+}
+
 install_claude_code() {
   local dest="${HOME}/.claude/agents"
   local count=0
@@ -361,6 +381,7 @@ install_windsurf() {
 
 install_tool() {
   case "$1" in
+    warp)        install_warp        ;;
     claude-code) install_claude_code ;;
     antigravity) install_antigravity ;;
     gemini-cli)  install_gemini_cli  ;;

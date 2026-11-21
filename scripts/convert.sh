@@ -16,6 +16,7 @@
 #   cursor       — Cursor rule files (.cursor/rules/*.mdc)
 #   aider        — Single CONVENTIONS.md for Aider
 #   windsurf     — Single .windsurfrules for Windsurf
+#   warp         — Warp skill files (.agents/skills/ or ~/.warp/skills/)
 #   all          — All tools (default)
 #
 # Output is written to integrations/<tool>/ relative to the repo root.
@@ -77,6 +78,29 @@ slugify() {
 }
 
 # --- Per-tool converters ---
+
+convert_warp() {
+  local file="$1"
+  local name description slug outdir outfile body
+
+  name="$(get_field "name" "$file")"
+  description="$(get_field "description" "$file")"
+  slug="agency-$(slugify "$name")"
+  body="$(get_body "$file")"
+
+  outdir="$OUT_DIR/warp/$slug"
+  outfile="$outdir/SKILL.md"
+  mkdir -p "$outdir"
+
+  # Warp SKILL.md format: name + description frontmatter, body as instructions
+  cat > "$outfile" <<HEREDOC
+---
+name: ${slug}
+description: ${description}
+---
+${body}
+HEREDOC
+}
 
 convert_antigravity() {
   local file="$1"
@@ -266,6 +290,7 @@ run_conversions() {
       [[ -n "$name" ]] || continue
 
       case "$tool" in
+        warp)        convert_warp        "$file" ;;
         antigravity) convert_antigravity "$file" ;;
         gemini-cli)  convert_gemini_cli  "$file" ;;
         opencode)    convert_opencode    "$file" ;;
@@ -305,7 +330,7 @@ main() {
     esac
   done
 
-  local valid_tools=("antigravity" "gemini-cli" "opencode" "cursor" "aider" "windsurf" "all")
+  local valid_tools=("warp" "antigravity" "gemini-cli" "opencode" "cursor" "aider" "windsurf" "all")
   local valid=false
   for t in "${valid_tools[@]}"; do [[ "$t" == "$tool" ]] && valid=true && break; done
   if ! $valid; then
@@ -321,7 +346,7 @@ main() {
 
   local tools_to_run=()
   if [[ "$tool" == "all" ]]; then
-    tools_to_run=("antigravity" "gemini-cli" "opencode" "cursor" "aider" "windsurf")
+    tools_to_run=("warp" "antigravity" "gemini-cli" "opencode" "cursor" "aider" "windsurf")
   else
     tools_to_run=("$tool")
   fi
